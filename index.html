@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Simple Inventory (Supabase)</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; }
+    input, button { margin: .3rem; padding: .5rem; }
+    table { border-collapse: collapse; margin-top: 1rem; width: 100%; }
+    th, td { border: 1px solid #ccc; padding: .5rem; }
+  </style>
+</head>
+<body>
+  <h1>Inventory System (Supabase + JS)</h1>
+
+  <h2>Add Item</h2>
+  <input id="itemName" placeholder="Item name">
+  <input id="itemQty" type="number" placeholder="Quantity">
+  <button onclick="addItem()">Add</button>
+
+  <h2>Inventory List</h2>
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Name</th><th>Qty</th><th>Status</th><th>Action</th></tr>
+    </thead>
+    <tbody id="inventoryTable"></tbody>
+  </table>
+
+  <!-- Supabase client -->
+  <script src="https://unpkg.com/@supabase/supabase-js"></script>
+  <script>
+    // Replace with your project details
+    const SUPABASE_URL = "https://mijddfqvgxkltlbvihuu.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pamRkZnF2Z3hrbHRsYnZpaHV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgyNDQ2NjQsImV4cCI6MjA3MzgyMDY2NH0.WlV76d-CBfwa_ot0Cgu0aTliSEN2ayxXDLdXthPmE9I";
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const tableBody = document.getElementById("inventoryTable");
+
+    // Fetch and display inventory
+    async function loadInventory() {
+      const { data, error } = await db.from("inventory").select("*");
+      if (error) {
+        console.error(error);
+        return;
+      }
+      tableBody.innerHTML = "";
+      data.forEach(item => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${item.id}</td>
+          <td>${item.name}</td>
+          <td>${item.quantity}</td>
+          <td>${item.status}</td>
+          <td>
+            <button onclick="updateStatus(${item.id}, 'maintenance')">Set Maintenance</button>
+            <button onclick="updateStatus(${item.id}, 'available')">Set Available</button>
+          </td>
+        `;
+        tableBody.appendChild(tr);
+      });
+    }
+
+    // Add new item
+    async function addItem() {
+      const name = document.getElementById("itemName").value.trim();
+      const qty = parseInt(document.getElementById("itemQty").value);
+      if (!name || !qty) return alert("Please fill all fields");
+
+      const { error } = await db.from("inventory").insert([
+        { name: name, quantity: qty, status: "available" }
+      ]);
+
+      if (error) {
+        console.error(error);
+        alert("Failed to add item!");
+      } else {
+        document.getElementById("itemName").value = "";
+        document.getElementById("itemQty").value = "";
+        loadInventory(); // refresh
+      }
+    }
+
+    // Update status
+    async function updateStatus(id, newStatus) {
+      const { error } = await db.from("inventory")
+        .update({ status: newStatus })
+        .eq("id", id);
+
+      if (error) {
+        console.error(error);
+        alert("Failed to update status!");
+      } else {
+        loadInventory();
+      }
+    }
+
+    // Initial load
+    loadInventory();
+  </script>
+</body>
+</html>
